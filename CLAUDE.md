@@ -340,17 +340,20 @@ features. (A Godot-style node tree was built first, then replaced by request
 (3) time-rewind debugger, (4) C# hot-reload scripts ✅ (done early, see
 "Scripting" below),
 (5) juice toolkit +
-glTF + shadow maps. Web/WebGL build + ASP.NET backend were discussed, not
-started.
+glTF + shadow maps. A WebGL build was rejected (C# → browser isn't worth
+it); instead games are shared as downloadable Windows zips via the
+MyEngine Games website (see "Website" and "Build & Publish" below).
 
-Run: `dotnet run --project Editor/Editor.csproj` (opens `SampleProject\`;
-first run writes the demo to `SampleProject/Assets/Scenes/Main.scene`).
-Flags: `--select <name>`, `--play` (presses Play on frame 30),
-`--screenshot <png> --frames N` (saves the window and exits — visual checks
-without synthetic input; Eddy may be using the PC meanwhile, so keep these
-runs few). Standalone: `dotnet run --project Game -- scene <file.scene>`.
-`SampleProject/main.scene` and `main.recovery.scene` are leftovers in the
-old node format and can be deleted.
+Run: `dotnet run --project Editor/Editor.csproj` opens the **Project Hub**
+(recent projects, New Project, open by path, SampleProject listed as
+"sample"); `-- <projectDir>` opens a project directly. A project's first
+open writes `Assets/Scenes/Main.scene` (full demo for SampleProject,
+`DemoScene.PopulateStarter` for New Project). Flags: `--select <name>`,
+`--play` (presses Play on frame 30), `--window build|publish|shortcuts`,
+`--hub`, `--screenshot <png> --frames N` (saves the window and exits —
+visual checks without synthetic input; Eddy may be using the PC
+meanwhile, so keep these runs few). Test flags without a project open
+SampleProject. Standalone: `dotnet run --project Game -- scene <file.scene>`.
 
 - **Core (`Engine/Core`, namespace `Engine.Core` — not `Engine.Scene`,
   since a class can't share its namespace's name)**: `EngineObject` (Unity's
@@ -482,3 +485,91 @@ script references, broken script keeps old code running and blocks Play,
 edit-mode reload, delete → Missing → restore. Screenshot confirms Script
 Editor. Not hand-tested: typing in the editor, click-to-jump, New Script
 flow in the UI.
+
+## Editor look (black & white) + usability
+
+`EditorTheme` = monochrome, every ImGui rounding 0, 1px seams between
+panels (`Gap = 1`), white = "active" (focused panel outline, selected tab,
+checkmarks, Play state). Only exceptions to grayscale: `Error` red,
+`Warning` amber, `AxisX/Y/Z` (gizmos/vectors). Helpers: `PrimaryButton`
+(white, black bold text), `ToggleButton` (square replacement for radio
+buttons), `Label` (uppercase gray caption), `EmptyState`, `HeadingFont`
+(real 32px bold — never `SetWindowFontScale`, it blurs). Playing = a
+pulsing white bar under the title strip. Code editor syntax colors are a
+grayscale ramp (keywords white, comments darkest). `Widgets.PrefabColor` is
+white (prefabs = the brightest thing in the Hierarchy). The same identity
+as the website (square-in-square logo).
+
+Usability: Project Hub (`ProjectHub.cs`), File → Open Project / Recent
+Projects (restarts the editor process on the new project after a "save
+changes?" modal — engine state is static), Help → Keyboard Shortcuts (F1),
+`EditorPrefs` (per-user JSON in `%APPDATA%\MyEngine\editor.json`: recent
+projects, site URL, API token). Closing from the hub must not touch `_ctx`
+(null until a project opens).
+
+## Build & Publish (`Editor/Build`, `Editor/Publishing`)
+
+- `GameSettings` (`<project>/ProjectSettings/GameSettings.json`): product
+  name, version, start scene, self-contained flag, store-page text/tags,
+  `PublishedSlug` (later publishes = new version of that game).
+- `GameBuilder` (background task, UI polls `Status/Step/Progress/Log`):
+  `dotnet publish Game -c Release -r win-x64 [--self-contained]` into
+  `Library/PlayerBuild`, copy to `Builds/<SafeName>/`, rename `Game.exe` →
+  `<SafeName>.exe` (only the apphost; it still loads Game.dll — never pass
+  `-p:AssemblyName`, it would rename Engine.dll too), copy
+  `Assets/ProjectSettings/Library/ScriptAssemblies` into `Data/`, write
+  `game.json`, zip to `Builds/<SafeName>-<ver>-win64.zip` (~36 MB
+  self-contained). Needs the repo (finds `MyEngine.slnx` upward from the
+  exe or project) and the .NET SDK. `Game/Program.cs`: no args + `game.json`
+  next to the exe → `SceneRunner(Data/<startScene>, name)`.
+- `BuildWindow` (File → Build Settings…, Ctrl+B builds, Ctrl+Shift+B opens)
+  saves a dirty scene first; refuses while playing or with script errors.
+- `SiteClient` + `PublishWindow` (File → Publish to MyEngine Games…):
+  device-code sign-in (opens browser → approve on site → poll), choose new
+  game vs. new version of one of yours, store-page fields, screenshots from
+  `<project>/Screenshots/` (+ "Capture Game view" via
+  `GameViewPanel.SaveScreenshot`), Build & Publish with upload progress.
+  401 → signs out. All network/build work on tasks that only set fields.
+
+Verified: headless test drove GameBuilder + SiteClient against the local
+server (build 36 MB zip, device login, create, add version, duplicate
+version rejected, bad token → unauthorized); the unzipped build launched
+from an unrelated folder with the right title. Screenshots confirm hub,
+main editor, Publish window (signed in/out). Not hand-tested: clicking
+through Publish with a real GitHub account.
+
+## Website (`Website/`, "MyEngine Games")
+
+Full write-up: `Website/README.md` — keep it in sync.
+`Website/Server` (ASP.NET Core minimal APIs, .NET 10, in MyEngine.slnx):
+EF Core SQLite (`EnsureCreated`, no migrations yet; DateTimes forced to
+UTC by a converter), data + uploads in `App_Data/` (git-ignored).
+Auth: policy scheme → cookie (`mye_session`, HttpOnly, SameSite=Lax) or
+`ApiTokenHandler` (Bearer, SHA-256 hashed tokens); GitHub OAuth via
+`AddOAuth` only when `GitHub:ClientId/ClientSecret` are set (user-secrets);
+Development-only `/auth/dev-login`. CSRF: cookie-authenticated writes need
+header `X-MyEngine: 1` (client + editor always send it). `DeviceLogin` =
+in-memory device-code flow for the editor. Uploads validated by magic
+bytes (images ≤ 8 MB, zip builds ≤ 1 GB, raised per request via
+`IHttpMaxRequestBodySizeFeature`), random names; images served at
+`/media/images`, builds only via the counting download endpoint. Rate
+limits "write"/"upload". Endpoints: `Api/GameEndpoints.cs` (browse
+q/tag/sort/page, CRUD, cover, screenshots add/delete/reorder, versions,
+download, likes, comments, tags), `Api/UserEndpoints.cs` (auth, me,
+tokens, profiles, device). Port 5080.
+
+`Website/Client` (React 19 + TS + Vite + react-router): dev on :5173 with a
+proxy to :5080 (same origin → cookie works); `npm run build` → 
+`Server/wwwroot` (SPA fallback). Pages: Home (search/sort/tags in the URL),
+GamePage (viewer + lightbox, download box, versions, comments), NewGame
+(3 numbered steps, drag-drop, XHR upload progress), EditGame, Profile,
+Settings (profile + revoke editor tokens), Login, Device (approve editor),
+404. Design = `index.css`: black/white, `border-radius: 0` everywhere,
+2px lines, hard offset shadow, grayscale covers that color on hover,
+light + dark via `prefers-color-scheme`. Node on this PC: use
+`C:\Program Files\nodejs` (the nvm4w shim on PATH is broken in bash).
+
+Verified with curl (every endpoint incl. CSRF/401/404 paths) and headless
+Edge screenshots (home, game page desktop/narrow, light/dark). Not
+visually checked: NewGame/EditGame/Settings pages (need a signed-in
+browser), real GitHub OAuth (needs an OAuth app).

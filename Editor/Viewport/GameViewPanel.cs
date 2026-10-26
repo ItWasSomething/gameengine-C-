@@ -34,6 +34,17 @@ public sealed class GameViewPanel : IDisposable
         _output = new Framebuffer(gl, 16, 16, hdr: false);
     }
 
+    // Saves the last frame the Game view rendered as a PNG (for store-page
+    // screenshots). False if nothing has been rendered yet — e.g. the tab is
+    // hidden or the scene has no camera.
+    public bool SaveScreenshot(string path)
+    {
+        if (!IsVisible || _output.Width <= 16 || Camera.FindRenderCamera(_ctx.Scene) == null) return false;
+        PngWriter.Save(path, _output.Width, _output.Height, _output.ReadPixels());
+        Engine.Log.Info($"Screenshot saved: {path}");
+        return true;
+    }
+
     public void Draw()
     {
         // Side padding = the card gap, so the image sits inside the card.
@@ -55,7 +66,7 @@ public sealed class GameViewPanel : IDisposable
         var camera = Camera.FindRenderCamera(_ctx.Scene);
         if (camera == null)
         {
-            dl.AddRectFilled(min, min + size, Widgets.U32(new Vector4(0.03f, 0.025f, 0.02f, 1)), 6, ImDrawFlags.RoundCornersBottom);
+            dl.AddRectFilled(min, min + size, Widgets.U32(EditorTheme.Bg0));
             const string text = "No cameras rendering";
             var ts = ImGui.CalcTextSize(text);
             dl.AddText(min + (size - ts) / 2, Widgets.U32(EditorTheme.TextDim), text);
@@ -65,19 +76,19 @@ public sealed class GameViewPanel : IDisposable
             _output.EnsureSize((int)size.X, (int)size.Y);
             _renderer.Render(_ctx.Scene, CameraView.From(camera, _output.Aspect), _output);
             _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            dl.AddImageRounded((IntPtr)_output.ColorTexture, min, min + size, new Vector2(0, 1), new Vector2(1, 0), 0xFFFFFFFF, 6, ImDrawFlags.RoundCornersBottom);
+            dl.AddImageRounded((IntPtr)_output.ColorTexture, min, min + size, new Vector2(0, 1), new Vector2(1, 0), 0xFFFFFFFF, 0);
         }
 
-        // A thin frame shows the game is live (orange) or paused (yellow).
+        // A thin frame shows the game is live (white) or paused (amber).
         if (_ctx.IsPlaying)
-            dl.AddRect(min, min + size, Widgets.U32(_ctx.State == PlayState.Paused ? EditorTheme.Warning : EditorTheme.Accent), 6, ImDrawFlags.RoundCornersBottom, 2);
+            dl.AddRect(min, min + size, Widgets.U32(_ctx.State == PlayState.Paused ? EditorTheme.Warning : EditorTheme.Accent), 0, ImDrawFlags.None, 2);
         else EditorTheme.DrawFocusOutline(min, min + size);
         if (_ctx.IsPlaying && !IsFocused)
         {
             const string hint = "Click to give the game keyboard focus";
             var ts = ImGui.CalcTextSize(hint);
             var p = new Vector2(min.X + (size.X - ts.X) / 2, min.Y + size.Y - ts.Y - 10);
-            dl.AddRectFilled(p - new Vector2(8, 4), p + ts + new Vector2(8, 4), Widgets.U32(new Vector4(0, 0, 0, 0.55f)), 4);
+            dl.AddRectFilled(p - new Vector2(8, 4), p + ts + new Vector2(8, 4), Widgets.U32(new Vector4(0, 0, 0, 0.75f)));
             dl.AddText(p, Widgets.U32(EditorTheme.Text), hint);
         }
         ImGui.End();

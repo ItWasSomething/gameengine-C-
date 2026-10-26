@@ -39,6 +39,8 @@ public sealed class ScriptSystem : IDisposable
 
     // Raised after a successful reload (panels refresh lists, etc.).
     public event Action? Reloaded;
+    // Raised on the main thread after a compile with errors (argument = error count).
+    public event Action<int>? CompileFailed;
 
     public string ScriptsFolder => Path.Combine(AssetDatabase.assetsFolder, "Scripts");
     private string LibraryDll => Path.Combine(_ctx.ProjectDirectory, "Library", "ScriptAssemblies", ScriptCompiler.AssemblyName + ".dll");
@@ -107,6 +109,7 @@ public sealed class ScriptSystem : IDisposable
         {
             foreach (var d in result.Diagnostics.Where(d => d.IsError)) Log.Error(d.Format(_ctx.ProjectDirectory));
             Log.Error("Scripts have compile errors — still running the last version that compiled.");
+            CompileFailed?.Invoke(result.Diagnostics.Count(d => d.IsError));
             return;
         }
         TypeFiles = result.TypeFiles;

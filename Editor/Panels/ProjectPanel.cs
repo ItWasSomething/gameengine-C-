@@ -94,7 +94,7 @@ public sealed class ProjectPanel
         if (isRoot) flags |= ImGuiTreeNodeFlags.DefaultOpen;
         if (ContainsPinged(folder)) ImGui.SetNextItemOpen(true);
 
-        ImGui.PushStyleColor(ImGuiCol.Text, EditorTheme.Rgb(0xE8C77A));
+        ImGui.PushStyleColor(ImGuiCol.Text, EditorTheme.Rgb(0xD0D0D0));
         bool open = ImGui.TreeNodeEx(folder.Path, flags, folder.Name);
         ImGui.PopStyleColor();
         FolderDropTarget(folder.Path);
@@ -166,7 +166,7 @@ public sealed class ProjectPanel
         if (isPrefab) Widgets.PrefabIcon();
         else FileIcon(ext);
         ImGui.SameLine(0, 6);
-        var color = isPrefab ? Widgets.PrefabBlue : isScene ? EditorTheme.Accent : ext == ".cs" ? EditorTheme.Rgb(0x8FD18F) : EditorTheme.Text;
+        var color = isPrefab ? Widgets.PrefabColor : isScene ? EditorTheme.Accent : ext == ".cs" ? EditorTheme.Rgb(0xC8C8C8) : EditorTheme.Text;
         ImGui.TextColored(color, isOpenScene ? name + "  (open)" : name);
     }
 
@@ -181,10 +181,10 @@ public sealed class ProjectPanel
         if (ext == SceneSerializer.SceneExtension)
         {
             // A little "clapper": scene files.
-            dl.AddRectFilled(min, max, color, 2);
+            dl.AddRectFilled(min, max, color);
             dl.AddLine(new Vector2(min.X, min.Y + 4), new Vector2(max.X, min.Y + 4), Widgets.U32(new Vector4(0, 0, 0, 0.6f)), 1.5f);
         }
-        else dl.AddRect(min, max, color, 1.5f, ImDrawFlags.None, 1.2f);
+        else dl.AddRect(min, max, color, 0, ImDrawFlags.None, 1.2f);
         ImGui.Dummy(new Vector2(13, h));
     }
 

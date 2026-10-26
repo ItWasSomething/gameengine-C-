@@ -15,8 +15,10 @@ using Silk.NET.Windowing;
 
 namespace Editor;
 
-public sealed record EditorOptions(string ProjectDirectory, string? ScreenshotPath = null, int ScreenshotFrame = 90,
-    bool AutoPlay = false, string? SelectOnStart = null, string? OpenScriptOnStart = null);
+// ProjectDirectory null = show the Project Hub first.
+public sealed record EditorOptions(string? ProjectDirectory, string? ScreenshotPath = null, int ScreenshotFrame = 90,
+    bool AutoPlay = false, string? SelectOnStart = null, string? OpenScriptOnStart = null, string? SampleProject = null,
+    string? OpenWindowOnStart = null);
 
 // The editor application: one OS window with an ImGui dockspace filling it,
 // laid out like Unity's default:
@@ -54,8 +56,14 @@ public sealed class EditorApp
     private TagsAndLayersWindow _tagsAndLayers = null!;
     private ScriptSystem _scripts = null!;
     private ScriptEditorPanel _scriptEditor = null!;
+    private Build.BuildWindow _build = null!;
+    private Publishing.PublishWindow _publish = null!;
+    private ProjectHub? _hub;   // non-null until a project is open
 
     private bool _layoutBuilt;
+    private bool _showShortcuts;
+    private string? _pendingRelaunch;   // project to switch to after the "save changes?" prompt ("" = hub)
+    private bool _askSaveBeforeRelaunch;
     private bool _focusGameView;
     private bool _showSaveAs;
     private string _saveAsName = "";
@@ -109,7 +117,19 @@ public sealed class EditorApp
         _imgui = new ImGuiController(_gl, _window, _input, ConfigureImGui);
         EditorTheme.Apply();
 
-        _ctx = new EditorContext(_options.ProjectDirectory);
+        if (_options.ProjectDirectory is { } project) OpenProject(project, isNew: false);
+        else _hub = new ProjectHub(OpenProject, _options.SampleProject);
+    }
+
+    // Everything that needs a project. Runs once: from OnLoad, or when you
+    // pick a project in the hub. (Switching projects later restarts the
+    // editor process — lots of engine state is static, like Unity's.)
+    private void OpenProject(string projectDirectory, bool isNew)
+    {
+        _hub = null;
+        EditorPrefs.Instance.AddRecentProject(projectDirectory);
+
+        _ctx = new EditorContext(projectDirectory);
         _console = new ConsolePanel();
         _ctx.PlayStarted += () =>
         {
@@ -124,7 +144,7 @@ public sealed class EditorApp
         _ctx.PlayBlocker = () => _scripts.HasErrors
             ? "All script compile errors have to be fixed before you can enter Play mode (see the Console)." : null;
         _scripts.CompileNow();
-        OpenStartupScene();
+        OpenStartupScene(isNew);
 
         _renderer = new Renderer3D(_gl);
         _hierarchy = new HierarchyPanel(_ctx);
@@ -137,11 +157,59 @@ public sealed class EditorApp
         _ctx.OpenScript = (file, line) => _scriptEditor.Open(file, line);
         _console.OpenLocation = (file, line) => { if (ResolveScript(file) is { } path) _scriptEditor.Open(path, line); };
 
-        Log.Info($"MyEngine editor ready. Project: {_options.ProjectDirectory}");
-        Log.Info("Scene view: right-drag + WASD to fly, Alt+drag to orbit, middle-drag to pan, F to frame, W/E/R for move/rotate/scale.");
+        _build = new Build.BuildWindow(_ctx);
+        _publish = new Publishing.PublishWindow(_ctx, _build, _gameView.SaveScreenshot);
+        _build.OpenPublish = () => { _build.Open = false; _publish.Show(); };
+        _scripts.CompileFailed += QuackAtCompileErrors;
+        _sceneView.DrawScreenOverlays += DrawDuckBubbles;
+
+        Log.Info($"MyEngine editor ready. Project: {projectDirectory}");
+        Log.Info("Scene view: right-drag + WASD to fly, Alt+drag to orbit, middle-drag to pan, F to frame, W/E/R for move/rotate/scale. Help → Keyboard Shortcuts lists the rest.");
         if (_options.SelectOnStart is { } name) _ctx.Select(GameObject.Find(name));
         if (_options.OpenScriptOnStart is { } script) _scriptEditor.Open(script);
+        if (_options.OpenWindowOnStart == "build") _build.Open = true;
+        if (_options.OpenWindowOnStart == "publish") _publish.Show();
+        if (_options.OpenWindowOnStart == "shortcuts") _showShortcuts = true;
+    }
 
+    // File → Open Project / recent projects: start a fresh editor process on
+    // that project (or on the hub, for "") and close this one.
+    private void Relaunch(string project)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        // Under `dotnet Editor.dll` the process is dotnet.exe; pass the dll along.
+        if (Path.GetFileNameWithoutExtension(Environment.ProcessPath!).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+            psi.ArgumentList.Add(typeof(EditorApp).Assembly.Location);
+        if (project.Length > 0) psi.ArgumentList.Add(project);
+        System.Diagnostics.Process.Start(psi);
+        _window.Close();
+    }
+
+    private void RequestRelaunch(string project)
+    {
+        _pendingRelaunch = project;
+        if (_ctx.IsDirty && !_ctx.IsPlaying && _ctx.ScenePath != null) _askSaveBeforeRelaunch = true;
+        else Relaunch(project);
+    }
+
+    private void DrawSaveBeforeRelaunch()
+    {
+        if (_askSaveBeforeRelaunch) { ImGui.OpenPopup("Save changes?"); _askSaveBeforeRelaunch = false; }
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f));
+        if (!ImGui.BeginPopupModal("Save changes?", ImGuiWindowFlags.AlwaysAutoResize)) return;
+        ImGui.TextUnformatted($"Save changes to {_ctx.SceneDisplayName.TrimEnd('*')} before switching projects?");
+        ImGui.Spacing();
+        if (EditorTheme.PrimaryButton("SAVE", new Vector2(110, 0))) { _ctx.SaveScene(); ImGui.CloseCurrentPopup(); Relaunch(_pendingRelaunch!); }
+        ImGui.SameLine();
+        if (ImGui.Button("Don't save", new Vector2(110, 0)))
+        {
+            _ctx.MarkClean();
+            ImGui.CloseCurrentPopup();
+            Relaunch(_pendingRelaunch!);
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel", new Vector2(110, 0))) { _pendingRelaunch = null; ImGui.CloseCurrentPopup(); }
+        ImGui.EndPopup();
     }
 
     // Runs inside ImGuiController's constructor, before the font atlas is
@@ -174,9 +242,10 @@ public sealed class EditorApp
         _monoFont = File.Exists(mono) ? io.Fonts.AddFontFromFileTTF(mono, 15f, null, ranges) : io.Fonts.Fonts[0];
         string bold = Path.Combine(fonts, "segoeuib.ttf");
         EditorTheme.BoldFont = File.Exists(bold) ? io.Fonts.AddFontFromFileTTF(bold, 17f, null, ranges) : io.Fonts.Fonts[0];
+        EditorTheme.HeadingFont = File.Exists(bold) ? io.Fonts.AddFontFromFileTTF(bold, 32f, null, ranges) : io.Fonts.Fonts[0];
     }
 
-    private void OpenStartupScene()
+    private void OpenStartupScene(bool isNew)
     {
         string main = Path.Combine(AssetDatabase.assetsFolder, "Scenes", "Main" + SceneSerializer.SceneExtension);
         if (File.Exists(main))
@@ -184,16 +253,18 @@ public sealed class EditorApp
             _ctx.OpenScene(main);
             return;
         }
-        // First run: build the demo scene and save it so the project has
-        // something in it.
+        // First run: build a scene and save it so the project has something
+        // in it — the full demo for the sample project, a bare starter for
+        // a project made with New Project.
         _ctx.NewScene();
         foreach (var go in _ctx.Scene.GetRootGameObjects().ToList()) EngineObject.DestroyImmediate(go);
-        DemoScene.Populate();
+        if (isNew) DemoScene.PopulateStarter(); else DemoScene.Populate();
         _ctx.SaveScene(main);
     }
 
     private void OnUpdate(double delta)
     {
+        if (_hub != null) return;   // no project yet
         // The game only sees keyboard/mouse while the Game view has focus
         // and you aren't typing into a text field.
         Engine.Input.Enabled = _ctx.IsPlaying && _gameView.IsFocused && !ImGui.GetIO().WantTextInput;
@@ -214,7 +285,24 @@ public sealed class EditorApp
     {
         _imgui.Update((float)delta);
 
+        if (_hub != null)
+        {
+            _hub.Draw();
+            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            _gl.ClearColor(0, 0, 0, 1);
+            _gl.Clear(ClearBufferMask.ColorBufferBit);
+            _imgui.Render();
+            _window.Title = "MyEngine";
+            if (_options.ScreenshotPath != null && ++_frame == _options.ScreenshotFrame)
+            {
+                SaveWindowScreenshot(_options.ScreenshotPath);
+                _window.Close();
+            }
+            return;
+        }
+
         HandleShortcuts();
+        DuckAdviceOnSelect();
         DrawMainWindow();
         _hierarchy.Draw();
         _project.Draw();
@@ -227,14 +315,18 @@ public sealed class EditorApp
         _sceneView.Draw((float)delta);
         _tagsAndLayers.Draw();
         _scriptEditor.Draw(_monoFont);
+        _build.Draw();
+        _publish.Draw();
         DrawSaveAsDialog();
+        DrawSaveBeforeRelaunch();
         DrawAboutWindow();
+        DrawShortcutsWindow();
         Debug.ExpireLines();
 
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         var fb = _window.FramebufferSize;
         _gl.Viewport(0, 0, (uint)fb.X, (uint)fb.Y);
-        _gl.ClearColor(0.086f, 0.09f, 0.1f, 1f);
+        _gl.ClearColor(0, 0, 0, 1f);
         _gl.Clear(ClearBufferMask.ColorBufferBit);
         _imgui.Render();
 
@@ -278,7 +370,7 @@ public sealed class EditorApp
         ImGui.Begin("##EditorRoot", flags);
         ImGui.PopStyleColor();
         var rootPos = ImGui.GetWindowPos();
-        EditorTheme.DrawTitleStrip(rootPos, rootPos + new Vector2(ImGui.GetWindowWidth(), ImGui.GetFrameHeight() + 4));
+        EditorTheme.DrawTitleStrip(rootPos, rootPos + new Vector2(ImGui.GetWindowWidth(), ImGui.GetFrameHeight() + 4), _ctx.IsPlaying);
         ImGui.PopStyleVar(3);
 
         DrawMenuBar();
@@ -414,6 +506,24 @@ public sealed class EditorApp
             if (ImGui.MenuItem("Save", "Ctrl+S", false, !_ctx.IsPlaying)) _ctx.SaveScene();
             if (ImGui.MenuItem("Save As...", "Ctrl+Shift+S", false, !_ctx.IsPlaying)) OpenSaveAs();
             ImGui.Separator();
+            if (ImGui.MenuItem("Open Project...")) RequestRelaunch("");
+            if (ImGui.BeginMenu("Recent Projects"))
+            {
+                var recents = EditorPrefs.Instance.RecentProjects
+                    .Where(p => Directory.Exists(p) && !string.Equals(p, _ctx.ProjectDirectory, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (recents.Count == 0) ImGui.TextDisabled("No other projects yet");
+                foreach (var p in recents)
+                {
+                    if (ImGui.MenuItem(new DirectoryInfo(p).Name)) RequestRelaunch(p);
+                    if (ImGui.IsItemHovered()) ImGui.SetTooltip(p);
+                }
+                ImGui.EndMenu();
+            }
+            ImGui.Separator();
+            if (ImGui.MenuItem("Build Settings...", "Ctrl+Shift+B")) _build.Open = true;
+            if (ImGui.MenuItem("Build Game", "Ctrl+B", false, !_build.Builder.IsRunning && !_ctx.IsPlaying)) { _build.Open = true; _build.StartBuild(); }
+            if (ImGui.MenuItem("Publish to MyEngine Games...")) _publish.Show();
+            ImGui.Separator();
             if (ImGui.MenuItem("Exit", "Alt+F4")) _window.Close();
             ImGui.EndMenu();
         }
@@ -488,6 +598,10 @@ public sealed class EditorApp
 
         if (ImGui.BeginMenu("Help"))
         {
+            if (ImGui.MenuItem("Keyboard Shortcuts", "F1")) _showShortcuts = true;
+            if (ImGui.MenuItem("Open MyEngine Games website"))
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(EditorPrefs.Instance.SiteUrl) { UseShellExecute = true });
+            ImGui.Separator();
             if (ImGui.MenuItem("About MyEngine")) _showAbout = true;
             ImGui.EndMenu();
         }
@@ -531,7 +645,7 @@ public sealed class EditorApp
         bool paused = _ctx.State == PlayState.Paused;
 
         if (Widgets.IconButton("##play", playing ? Icon.Stop : Icon.Play, playing,
-                playing ? "Stop (Ctrl+P)" : "Play (Ctrl+P)", playing ? EditorTheme.Accent : EditorTheme.AxisY, button))
+                playing ? "Stop (Ctrl+P)" : "Play (Ctrl+P)", EditorTheme.Text, button))
             TogglePlay();
         ImGui.SameLine(0, gap);
         if (Widgets.IconButton("##pause", Icon.Pause, paused, "Pause (Ctrl+Shift+P)", null, button))
@@ -561,6 +675,12 @@ public sealed class EditorApp
         // While the game has the keyboard, leave plain keys to it.
         if (_ctx.IsPlaying && _gameView.IsFocused && !ctrl) return;
 
+        if (ImGui.IsKeyPressed(ImGuiKey.F1, false)) _showShortcuts = !_showShortcuts;
+        if (ctrl && ImGui.IsKeyPressed(ImGuiKey.B, false))
+        {
+            _build.Open = true;
+            if (!shift) _build.StartBuild();
+        }
         if (ctrl && ImGui.IsKeyPressed(ImGuiKey.S, false)) { if (shift) OpenSaveAs(); else _ctx.SaveScene(); }
         if (ctrl && ImGui.IsKeyPressed(ImGuiKey.N, false)) _ctx.NewScene();
         if (ctrl && ImGui.IsKeyPressed(ImGuiKey.Z)) { if (shift) _ctx.Redo(); else _ctx.Undo(); }
@@ -613,6 +733,108 @@ public sealed class EditorApp
         ImGui.End();
     }
 
+    // ---- Rubber ducks (see Engine/Core/RubberDuck.cs) ----------------------------------
+    //
+    // The duck itself only holds settings + its quack lines; reacting to the
+    // editor (compile errors, selection) and the speech bubbles live here,
+    // because the engine knows nothing about the editor.
+
+    private readonly Dictionary<RubberDuck, (string Text, double Until)> _duckBubbles = new();
+    private GameObject? _lastSelected;
+
+    private void QuackAtCompileErrors(int errorCount)
+    {
+        foreach (var duck in _ctx.Scene.FindComponents<RubberDuck>())
+        {
+            if (!duck.enabled || !duck.quackOnCompileErrors) continue;
+            string line = duck.Quack(errorCount);
+            Log.Warn($"[{duck.gameObject.name}] {line}");
+            _duckBubbles[duck] = ("QUACK!", ImGui.GetTime() + 2.5);
+        }
+    }
+
+    // Selecting a duck (or any part of one) gets you one piece of advice.
+    private void DuckAdviceOnSelect()
+    {
+        var selected = _ctx.Selected;
+        if (selected == _lastSelected) return;
+        _lastSelected = selected;
+        if (selected is null || !selected || selected.GetComponentInParent<RubberDuck>() is not { } duck) return;
+        string advice = RubberDuck.RandomWisdom();
+        Log.Info($"[{duck.gameObject.name}] {advice}");
+        _duckBubbles[duck] = (advice, ImGui.GetTime() + 4);
+    }
+
+    // A white speech bubble above each talking duck, in the Scene view.
+    private void DrawDuckBubbles(ImDrawListPtr dl, Vector2 imageMin, Vector2 imageSize, CameraView view)
+    {
+        double now = ImGui.GetTime();
+        foreach (var (duck, (text, until)) in _duckBubbles.ToList())
+        {
+            if (!duck || now > until) { _duckBubbles.Remove(duck); continue; }
+            var head = duck.transform.position + new Vector3(0, 1.45f * duck.transform.lossyScale.Y, 0);
+            if (!ViewportMath.WorldToScreen(head, imageSize, view, out var pixel)) continue;
+
+            // Pop in over the first 0.15 s, fade out over the last 0.4 s.
+            float age = (float)(now - (until - (text == "QUACK!" ? 2.5 : 4)));
+            float pop = MathF.Min(1, age / 0.15f);
+            float alpha = (float)Math.Clamp((until - now) / 0.4, 0, 1);
+            var textSize = ImGui.CalcTextSize(text);
+            var tip = imageMin + pixel - new Vector2(0, 6 * pop);
+            var min = tip - new Vector2(textSize.X / 2 + 10, textSize.Y + 18);
+            var max = tip + new Vector2(textSize.X / 2 + 10, -8);
+            dl.PushClipRect(imageMin, imageMin + imageSize, true);
+            dl.AddRectFilled(min + new Vector2(3), max + new Vector2(3), Widgets.U32(new Vector4(0, 0, 0, 0.5f * alpha)));
+            dl.AddRectFilled(min, max, Widgets.U32(new Vector4(1, 1, 1, alpha)));
+            dl.AddTriangleFilled(new Vector2(tip.X - 6, max.Y), new Vector2(tip.X + 6, max.Y), tip, Widgets.U32(new Vector4(1, 1, 1, alpha)));
+            dl.AddText(min + new Vector2(10, 5), Widgets.U32(new Vector4(0, 0, 0, alpha)), text);
+            dl.PopClipRect();
+        }
+    }
+
+    // Help → Keyboard Shortcuts (F1): every shortcut in one place, so they're
+    // discoverable without reading the source.
+    private static readonly (string Group, (string Keys, string What)[] Items)[] Shortcuts =
+    [
+        ("General", [("Ctrl+S", "Save scene"), ("Ctrl+Shift+S", "Save scene as"), ("Ctrl+N", "New scene"),
+                     ("Ctrl+Z / Ctrl+Y", "Undo / redo"), ("Ctrl+B", "Build game"), ("Ctrl+Shift+B", "Build settings"), ("F1", "This list")]),
+        ("Play mode", [("Ctrl+P", "Play / stop"), ("Ctrl+Shift+P", "Pause"), ("Ctrl+Alt+P", "Step one frame (paused)")]),
+        ("Selection", [("Ctrl+D", "Duplicate"), ("Delete", "Delete"), ("F2", "Rename"), ("F", "Frame in Scene view")]),
+        ("Scene view", [("Right-drag + WASD/QE", "Fly"), ("Alt + left-drag", "Orbit"), ("Middle-drag", "Pan"),
+                        ("Scroll", "Zoom"), ("W / E / R", "Move / rotate / scale gizmo")]),
+        ("Script editor", [("Ctrl+S", "Save + recompile"), ("Ctrl+F", "Find"), ("Ctrl+Space", "Autocomplete")]),
+    ];
+
+    private void DrawShortcutsWindow()
+    {
+        if (!_showShortcuts) return;
+        ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f));
+        if (ImGui.Begin("Keyboard Shortcuts", ref _showShortcuts, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse))
+        {
+            foreach (var (group, items) in Shortcuts)
+            {
+                EditorTheme.Label(group);
+                if (ImGui.BeginTable(group, 2, ImGuiTableFlags.SizingFixedFit))
+                {
+                    ImGui.TableSetupColumn("keys", ImGuiTableColumnFlags.WidthFixed, 190);
+                    foreach (var (keys, what) in items)
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableNextColumn();
+                        ImGui.PushFont(_monoFont);
+                        ImGui.TextUnformatted(keys);
+                        ImGui.PopFont();
+                        ImGui.TableNextColumn();
+                        ImGui.TextDisabled(what);
+                    }
+                    ImGui.EndTable();
+                }
+                ImGui.Spacing();
+            }
+        }
+        ImGui.End();
+    }
+
     // Console locations are project-relative ("Assets/Scripts/Foo.cs") for
     // compile errors, or just "Foo.cs" for runtime exceptions.
     private string? ResolveScript(string file)
@@ -625,18 +847,24 @@ public sealed class EditorApp
 
     private void OnClosing()
     {
-        if (_ctx.IsDirty && !_ctx.IsPlaying && _ctx.ScenePath != null)
+        // _ctx is null if the window closes while still on the Project Hub.
+        if (_ctx != null)
         {
-            // No "save changes?" prompt yet, so don't silently lose work:
-            // write a recovery copy next to the scene.
-            string recovery = Path.ChangeExtension(_ctx.ScenePath, ".recovery" + SceneSerializer.SceneExtension);
-            SceneSerializer.SaveScene(_ctx.Scene, recovery);
-            Log.Warn($"Unsaved changes written to {AssetDatabase.ToAssetPath(recovery)}");
+            if (_ctx.IsDirty && !_ctx.IsPlaying && _ctx.ScenePath != null)
+            {
+                // Closing the window can't be cancelled, so there's no "save
+                // changes?" prompt here; don't silently lose work — write a
+                // recovery copy next to the scene.
+                string recovery = Path.ChangeExtension(_ctx.ScenePath, ".recovery" + SceneSerializer.SceneExtension);
+                SceneSerializer.SaveScene(_ctx.Scene, recovery);
+                Log.Warn($"Unsaved changes written to {AssetDatabase.ToAssetPath(recovery)}");
+            }
+            _build.Builder.Cancel();
+            _sceneView.Dispose();
+            _scripts.Dispose();
+            _gameView.Dispose();
+            _renderer.Dispose();
         }
-        _sceneView.Dispose();
-        _scripts.Dispose();
-        _gameView.Dispose();
-        _renderer.Dispose();
         _imgui.Dispose();
         _input.Dispose();
         _gl.Dispose();

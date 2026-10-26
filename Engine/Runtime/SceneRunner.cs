@@ -22,13 +22,13 @@ public sealed class SceneRunner
     private Renderer3D _renderer = null!;
     private Framebuffer _output = null!;
 
-    public SceneRunner(string scenePath)
+    public SceneRunner(string scenePath, string? title = null)
     {
         _scenePath = scenePath;
         _window = Window.Create(WindowOptions.Default with
         {
             Size = new Vector2D<int>(1280, 720),
-            Title = $"MyEngine - {Path.GetFileNameWithoutExtension(scenePath)}",
+            Title = title ?? $"MyEngine - {Path.GetFileNameWithoutExtension(scenePath)}",
             VSync = true,
         });
         _window.Load += OnLoad;

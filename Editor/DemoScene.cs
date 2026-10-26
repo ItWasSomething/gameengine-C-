@@ -96,4 +96,31 @@ public static class DemoScene
             m.smoothness = 0.25f;
         }
     }
+
+    // What File → New Project starts with: the bare minimum to see something
+    // (a camera, a light, a sky, a floor and one cube to replace), so a new
+    // game doesn't begin by deleting the demo.
+    public static void PopulateStarter()
+    {
+        var cam = new GameObject("Main Camera") { tag = TagManager.MainCamera };
+        cam.AddComponent<Camera>();
+        cam.transform.position = new Vector3(0, 2.5f, -7f);
+        cam.transform.localEulerAngles = new Vector3(12, 0, 0);
+
+        var sun = new GameObject("Directional Light");
+        var light = sun.AddComponent<Light>();
+        light.type = LightType.Directional;
+        light.intensity = 1f;
+        sun.transform.localEulerAngles = new Vector3(45, -30, 0);
+
+        new GameObject("Sky Environment").AddComponent<SkyEnvironment>();
+
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        ground.name = "Ground";
+        ground.GetComponent<MeshRenderer>()!.material.checker = true;
+
+        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.name = "Cube";
+        cube.transform.position = new Vector3(0, 0.5f, 0);
+    }
 }

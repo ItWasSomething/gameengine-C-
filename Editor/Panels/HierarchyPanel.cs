@@ -128,7 +128,7 @@ public sealed class HierarchyPanel
         }
         else
         {
-            var color = go.prefabAssetPath != null ? Widgets.PrefabBlue : EditorTheme.Text;
+            var color = go.prefabAssetPath != null ? Widgets.PrefabColor : EditorTheme.Text;
             if (!go.activeInHierarchy) color = EditorTheme.WithAlpha(color, 0.45f);
             ImGui.TextColored(color, go.name);
         }
@@ -156,7 +156,7 @@ public sealed class HierarchyPanel
         // Draw the drop hint ourselves: a line for before/after, a box for "into".
         var dl = ImGui.GetWindowDrawList();
         var accent = Widgets.U32(EditorTheme.Accent);
-        if (zone == 0) dl.AddRect(rowMin, rowMax, accent, 3, ImDrawFlags.None, 1.5f);
+        if (zone == 0) dl.AddRect(rowMin, rowMax, accent, 0, ImDrawFlags.None, 1.5f);
         else
         {
             float lineY = zone < 0 ? rowMin.Y : rowMax.Y;
@@ -270,5 +270,8 @@ public static class CreateMenu
         }
         if (ImGui.MenuItem("Camera")) ctx.CreateGameObject("Camera", parent);
         if (ImGui.MenuItem("Sky Environment")) ctx.CreateGameObject("Sky Environment", parent);
+        ImGui.Separator();
+        if (ImGui.MenuItem("Rubber Duck")) ctx.CreateGameObject("Rubber Duck", parent);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("For rubber-duck debugging. Quacks when your scripts don't compile.");
     }
 }

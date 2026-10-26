@@ -35,33 +35,33 @@ public sealed class CodeEditor
 {
     private const int TabSize = 4;
 
-    // ---- Colors (warm forge palette) ----------------------------------------
+    // ---- Colors (monochrome) -------------------------------------------------
     private static readonly Dictionary<TokenKind, uint> TokenColors = new()
     {
-        [TokenKind.Text] = Col(0xE8DED3),
-        [TokenKind.Keyword] = Col(0xFF8A50),
-        [TokenKind.ControlKeyword] = Col(0xF27196),
-        [TokenKind.BuiltinType] = Col(0xFFB86C),
-        [TokenKind.Type] = Col(0x7FD6C2),
-        [TokenKind.Method] = Col(0xFFD580),
-        [TokenKind.Number] = Col(0xC3A6FF),
-        [TokenKind.String] = Col(0xA8D672),
-        [TokenKind.Comment] = Col(0x7D7068),
-        [TokenKind.Preprocessor] = Col(0x9A8F87),
-        [TokenKind.Punctuation] = Col(0xB8ADA3),
-        [TokenKind.Field] = Col(0xE8C9A9),
+        [TokenKind.Text] = Col(0xD4D4D4),
+        [TokenKind.Keyword] = Col(0xFFFFFF),
+        [TokenKind.ControlKeyword] = Col(0xFFFFFF),
+        [TokenKind.BuiltinType] = Col(0xEDEDED),
+        [TokenKind.Type] = Col(0xE6E6E6),
+        [TokenKind.Method] = Col(0xF0F0F0),
+        [TokenKind.Number] = Col(0xB8B8B8),
+        [TokenKind.String] = Col(0x9E9E9E),
+        [TokenKind.Comment] = Col(0x5F5F5F),
+        [TokenKind.Preprocessor] = Col(0x7A7A7A),
+        [TokenKind.Punctuation] = Col(0x8A8A8A),
+        [TokenKind.Field] = Col(0xC4C4C4),
     };
-    private static readonly uint BackgroundColor = Col(0x17130F);
-    private static readonly uint GutterColor = Col(0x120F0C);
-    private static readonly uint LineNumberColor = Col(0x5E534B);
-    private static readonly uint CurrentLineNumberColor = Col(0xFF9A5A);
-    private static readonly uint CurrentLineColor = Col(0x241C16);
-    private static readonly uint SelectionColor = Col(0xFF7A2F, 0.30f);
-    private static readonly uint FindMatchColor = Col(0xFFB347, 0.28f);
-    private static readonly uint CaretColor = Col(0xFFA060);
-    private static readonly uint ErrorColor = Col(0xF2545B);
-    private static readonly uint WarningColor = Col(0xF2C14E);
-    private static readonly uint BracketColor = Col(0xFFB347, 0.75f);
+    private static readonly uint BackgroundColor = Col(0x0B0B0B);
+    private static readonly uint GutterColor = Col(0x080808);
+    private static readonly uint LineNumberColor = Col(0x4A4A4A);
+    private static readonly uint CurrentLineNumberColor = Col(0xFFFFFF);
+    private static readonly uint CurrentLineColor = Col(0x161616);
+    private static readonly uint SelectionColor = Col(0xFFFFFF, 0.22f);
+    private static readonly uint FindMatchColor = Col(0xFFFFFF, 0.14f);
+    private static readonly uint CaretColor = Col(0xFFFFFF);
+    private static readonly uint ErrorColor = Col(0xFF5C5C);
+    private static readonly uint WarningColor = Col(0xE8B04A);
+    private static readonly uint BracketColor = Col(0xFFFFFF, 0.6f);
 
     private static uint Col(uint rgb, float alpha = 1f) =>
         ImGui.ColorConvertFloat4ToU32(new Vector4(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f, alpha));
@@ -324,6 +324,10 @@ public sealed class CodeEditor
         ContextMenu();
 
         // ---- Draw ----
+        // Input above may have just changed the text (Enter splits a line,
+        // Backspace joins two...). Re-tokenize before drawing, or the token
+        // ranges from the old text can point past the end of a shorter line.
+        UpdateTokens();
         var dl = ImGui.GetWindowDrawList();
         int first = Math.Max(0, (int)(scrollY / lineHeight));
         int last = Math.Min(_lines.Count - 1, first + (int)(winSize.Y / lineHeight) + 1);
@@ -360,7 +364,10 @@ public sealed class CodeEditor
 
             // Text, token by token.
             foreach (var t in _lineTokens[i])
-                dl.AddText(new Vector2(textX + t.Start * charWidth, y + 1), TokenColors[t.Kind], line.Substring(t.Start, t.Length));
+            {
+                if (t.Start >= line.Length) break;   // belt and braces: never index past the line
+                dl.AddText(new Vector2(textX + t.Start * charWidth, y + 1), TokenColors[t.Kind], line.Substring(t.Start, Math.Min(t.Length, line.Length - t.Start)));
+            }
 
             // Squiggles under errors/warnings.
             if (lineMarkers != null)
@@ -431,7 +438,7 @@ public sealed class CodeEditor
     {
         // Pinned to the left edge: it doesn't scroll sideways with the text.
         dl.AddRectFilled(winPos, new Vector2(winPos.X + gutterWidth, winPos.Y + winSize.Y), GutterColor);
-        dl.AddLine(new Vector2(winPos.X + gutterWidth, winPos.Y), new Vector2(winPos.X + gutterWidth, winPos.Y + winSize.Y), Col(0x2A221D));
+        dl.AddLine(new Vector2(winPos.X + gutterWidth, winPos.Y), new Vector2(winPos.X + gutterWidth, winPos.Y + winSize.Y), Col(0x222222));
         for (int i = first; i <= last; i++)
         {
             float y = origin.Y + i * lineHeight;
@@ -444,8 +451,8 @@ public sealed class CodeEditor
                 var c = new Vector2(winPos.X + 9, y + lineHeight / 2);
                 dl.AddCircleFilled(c, 4.5f, error ? ErrorColor : WarningColor);
                 // A tiny "!" in the dot.
-                dl.AddLine(c - new Vector2(0, 2.5f), c + new Vector2(0, 0.5f), Col(0x17130F), 1.5f);
-                dl.AddCircleFilled(c + new Vector2(0, 2.2f), 0.8f, Col(0x17130F));
+                dl.AddLine(c - new Vector2(0, 2.5f), c + new Vector2(0, 0.5f), Col(0x0B0B0B), 1.5f);
+                dl.AddCircleFilled(c + new Vector2(0, 2.2f), 0.8f, Col(0x0B0B0B));
             }
         }
     }
@@ -1105,15 +1112,15 @@ public sealed class CodeEditor
 
     private static (string Letter, uint Color) KindBadge(CompletionKind kind) => kind switch
     {
-        CompletionKind.Method => ("M", Col(0xFFD580)),
-        CompletionKind.Property => ("P", Col(0x8FD18F)),
-        CompletionKind.Field => ("F", Col(0xE8C9A9)),
-        CompletionKind.Event => ("E", Col(0xF27196)),
-        CompletionKind.Local => ("L", Col(0xB8ADA3)),
-        CompletionKind.EnumMember => ("V", Col(0xC3A6FF)),
-        CompletionKind.Type => ("T", Col(0x7FD6C2)),
-        CompletionKind.Namespace => ("N", Col(0x9A8F87)),
-        _ => ("K", Col(0xFF8A50)),
+        CompletionKind.Method => ("M", Col(0xF0F0F0)),
+        CompletionKind.Property => ("P", Col(0xD0D0D0)),
+        CompletionKind.Field => ("F", Col(0xC4C4C4)),
+        CompletionKind.Event => ("E", Col(0xB0B0B0)),
+        CompletionKind.Local => ("L", Col(0x9A9A9A)),
+        CompletionKind.EnumMember => ("V", Col(0xB8B8B8)),
+        CompletionKind.Type => ("T", Col(0xE6E6E6)),
+        CompletionKind.Namespace => ("N", Col(0x7A7A7A)),
+        _ => ("K", Col(0xFFFFFF)),
     };
 
     private void DrawCompletionPopup(Vector2 position)
@@ -1127,8 +1134,8 @@ public sealed class CodeEditor
         ImGui.SetNextWindowPos(position + new Vector2(-28, 2));
         ImGui.SetNextWindowSize(new Vector2(width, rows * rowHeight + ImGui.GetTextLineHeightWithSpacing() + 18));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(4, 4));
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(0.12f, 0.095f, 0.08f, 0.98f));
-        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1f, 0.48f, 0.18f, 0.55f));
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(0.07f, 0.07f, 0.07f, 0.99f));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1f, 1f, 1f, 0.35f));
         var flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoSavedSettings |
                     ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoDocking;
         if (ImGui.Begin("##completion" + GetHashCode(), flags))
@@ -1149,13 +1156,13 @@ public sealed class CodeEditor
                 }
                 if (i == _completionIndex && ImGui.IsWindowAppearing() == false) ImGui.SetScrollHereY();
                 var dl = ImGui.GetWindowDrawList();
-                dl.AddRectFilled(p + new Vector2(2, 1), p + new Vector2(16, rowHeight - 3), color, 3);
-                dl.AddText(p + new Vector2(5, 0), Col(0x17130F), letter);
-                dl.AddText(p + new Vector2(22, 0), Col(0xEDE6DF), item.Name);
+                dl.AddRectFilled(p + new Vector2(2, 1), p + new Vector2(16, rowHeight - 3), color);
+                dl.AddText(p + new Vector2(5, 0), Col(0x0B0B0B), letter);
+                dl.AddText(p + new Vector2(22, 0), Col(0xF2F2F2), item.Name);
             }
             ImGui.EndChild();
             ImGui.Separator();
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.62f, 0.56f, 0.5f, 1));
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.55f, 0.55f, 0.55f, 1));
             ImGui.TextUnformatted(detail.Length > 60 ? detail[..57] + "..." : detail);
             ImGui.PopStyleColor();
         }

@@ -35,6 +35,9 @@ public sealed class SceneViewPanel : IDisposable
     // Extra overlay drawing hooked in by other editor systems (e.g. the
     // physics visualizer), run after the scene renders.
     public event Action<DebugDraw, CameraView>? DrawOverlays;
+    // 2D drawing on top of the rendered image (labels, speech bubbles):
+    // (draw list, image top-left, image size, camera).
+    public event Action<ImDrawListPtr, Vector2, Vector2, CameraView>? DrawScreenOverlays;
 
     public SceneViewPanel(GL gl, EditorContext ctx, Renderer3D renderer)
     {
@@ -94,7 +97,8 @@ public sealed class SceneViewPanel : IDisposable
 
         // Flip V: GL textures start at the bottom row, ImGui images at the top.
         ImGui.GetWindowDrawList().AddImageRounded((IntPtr)_output.ColorTexture, imageMin, imageMin + size, new Vector2(0, 1), new Vector2(1, 0),
-            0xFFFFFFFF, 6, ImDrawFlags.RoundCornersBottom);
+            0xFFFFFFFF, 0);
+        DrawScreenOverlays?.Invoke(ImGui.GetWindowDrawList(), imageMin, size, view);
         DrawStatsOverlay(imageMin, size);
         EditorTheme.DrawFocusOutline(imageMin, imageMin + size);
         ImGui.End();
@@ -108,7 +112,7 @@ public sealed class SceneViewPanel : IDisposable
         ImGui.SetCursorPos(ImGui.GetCursorPos() + new Vector2(6, 4));
         // A dark pill behind the tool buttons, so they read as one control.
         var pill = ImGui.GetCursorScreenPos() - new Vector2(3, 2);
-        ImGui.GetWindowDrawList().AddRectFilled(pill, pill + new Vector2(24 * 3 + 4 + 6, 28), Widgets.U32(EditorTheme.WithAlpha(EditorTheme.Bg0, 0.85f)), 14);
+        ImGui.GetWindowDrawList().AddRectFilled(pill, pill + new Vector2(24 * 3 + 4 + 6, 28), Widgets.U32(EditorTheme.WithAlpha(EditorTheme.Bg0, 0.85f)));
         if (Widgets.IconButton("##move", Icon.Move, _gizmo.Mode == GizmoMode.Move, "Move (W)", null, 24)) _gizmo.Mode = GizmoMode.Move;
         ImGui.SameLine(0, 2);
         if (Widgets.IconButton("##rotate", Icon.Rotate, _gizmo.Mode == GizmoMode.Rotate, "Rotate (E)", null, 24)) _gizmo.Mode = GizmoMode.Rotate;
@@ -132,7 +136,7 @@ public sealed class SceneViewPanel : IDisposable
         var textSize = ImGui.CalcTextSize(text);
         var pos = new Vector2(min.X + size.X - textSize.X - 10, min.Y + 8);
         var dl = ImGui.GetWindowDrawList();
-        dl.AddRectFilled(pos - new Vector2(6, 3), pos + textSize + new Vector2(6, 3), Widgets.U32(new Vector4(0, 0, 0, 0.45f)), 4);
+        dl.AddRectFilled(pos - new Vector2(6, 3), pos + textSize + new Vector2(6, 3), Widgets.U32(new Vector4(0, 0, 0, 0.6f)));
         dl.AddText(pos, Widgets.U32(EditorTheme.Text), text);
     }
 

@@ -147,14 +147,14 @@ public sealed class InspectorPanel
         float width = ImGui.GetContentRegionAvail().X;
         float height = ImGui.GetFrameHeight() + 8;
         ImGui.GetWindowDrawList().AddRectFilled(start, start + new Vector2(width, height),
-            Widgets.U32(EditorTheme.WithAlpha(Widgets.PrefabBlue, 0.12f)), 5);
+            Widgets.U32(EditorTheme.WithAlpha(Widgets.PrefabColor, 0.12f)), 5);
         ImGui.SetCursorScreenPos(start + new Vector2(6, 4));
 
         Widgets.PrefabIcon();
         ImGui.SameLine(0, 6);
         ImGui.AlignTextToFramePadding();
         string label = root == go ? Path.GetFileNameWithoutExtension(root.prefabAssetPath!) : $"in {root.name}";
-        ImGui.TextColored(Widgets.PrefabBlue, label);
+        ImGui.TextColored(Widgets.PrefabColor, label);
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(root.prefabAssetPath);
 
         float buttons = ImGui.CalcTextSize("Select").X + ImGui.CalcTextSize("Revert").X + ImGui.CalcTextSize("Apply").X + 80;
@@ -188,7 +188,7 @@ public sealed class InspectorPanel
             // A stripe in the component's own color down the header's left edge.
             var hMin = ImGui.GetItemRectMin();
             var hMax = ImGui.GetItemRectMax();
-            ImGui.GetWindowDrawList().AddRectFilled(hMin, new Vector2(hMin.X + 3, hMax.Y), Widgets.U32(Widgets.ComponentColor(type)), 3, ImDrawFlags.RoundCornersLeft);
+            ImGui.GetWindowDrawList().AddRectFilled(hMin, new Vector2(hMin.X + 3, hMax.Y), Widgets.U32(Widgets.ComponentColor(type)));
         }
 
         // Draw icon, enabled checkbox, title and menu button over the header.
@@ -690,7 +690,7 @@ public sealed class InspectorPanel
             if (ImGui.IsItemHovered()) ImGui.SetTooltip(labels[i]);
 
             ImGui.GetWindowDrawList().AddRectFilled(pos, pos + new Vector2(3, h),
-                Widgets.U32(colors[i]), 2, ImDrawFlags.RoundCornersLeft);
+                Widgets.U32(colors[i]));
             ImGui.PopID();
         }
         return changed;

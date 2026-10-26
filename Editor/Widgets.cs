@@ -13,7 +13,9 @@ public static class Widgets
 {
     public static uint U32(Vector4 c) => ImGui.ColorConvertFloat4ToU32(c);
 
-    public static readonly Vector4 PrefabBlue = EditorTheme.Rgb(0x6FB6FF);
+    // Prefab instances are the one thing drawn in pure white; everything else
+    // is a shade of gray, so prefabs stand out without needing a color.
+    public static readonly Vector4 PrefabColor = EditorTheme.Rgb(0xFFFFFF);
 
     // A square button with a drawn icon. `active` highlights it (e.g. the
     // Play button while playing).
@@ -28,7 +30,7 @@ public static class Widgets
         var bg = active ? EditorTheme.WithAlpha(EditorTheme.Accent, 0.25f)
             : held ? new Vector4(1, 1, 1, 0.12f)
             : hovered ? new Vector4(1, 1, 1, 0.07f) : Vector4.Zero;
-        if (bg.W > 0) dl.AddRectFilled(pos, pos + new Vector2(size), U32(bg), 5);
+        if (bg.W > 0) dl.AddRectFilled(pos, pos + new Vector2(size), U32(bg));
 
         var color = U32(tint ?? (active ? EditorTheme.Accent : EditorTheme.Text));
         var c = pos + new Vector2(size / 2);
@@ -83,20 +85,20 @@ public static class Widgets
 
     private static (Shape, Vector4) Describe(Type componentType)
     {
-        if (componentType == typeof(Camera)) return (Shape.Camera, EditorTheme.Rgb(0xB18CFF));
-        if (componentType == typeof(Light)) return (Shape.Sun, EditorTheme.Warning);
-        if (componentType == typeof(MeshRenderer) || componentType == typeof(MeshFilter)) return (Shape.Cube, EditorTheme.Accent);
-        if (componentType == typeof(SkyEnvironment)) return (Shape.Sky, EditorTheme.AxisY);
+        if (componentType == typeof(Camera)) return (Shape.Camera, EditorTheme.Rgb(0xC8C8C8));
+        if (componentType == typeof(Light)) return (Shape.Sun, EditorTheme.Rgb(0xE0E0E0));
+        if (componentType == typeof(MeshRenderer) || componentType == typeof(MeshFilter)) return (Shape.Cube, EditorTheme.Rgb(0xB4B4B4));
+        if (componentType == typeof(SkyEnvironment)) return (Shape.Sky, EditorTheme.Rgb(0x9A9A9A));
         if (componentType == typeof(Transform)) return (Shape.HollowCube, EditorTheme.TextDim);
         if (componentType == typeof(MissingComponent)) return (Shape.Script, EditorTheme.Error);
-        return (Shape.Script, EditorTheme.Rgb(0x8FD18F));
+        return (Shape.Script, EditorTheme.Rgb(0xA8A8A8));
     }
 
     public static Vector4 ComponentColor(Type componentType) => Describe(componentType).Item2;
 
     public static Vector4 GameObjectColor(GameObject go)
     {
-        if (go.prefabAssetPath != null) return PrefabBlue;
+        if (go.prefabAssetPath != null) return PrefabColor;
         return Describe(MainComponent(go)).Item2;
     }
 
@@ -109,7 +111,7 @@ public static class Widgets
 
     public static void GameObjectIcon(GameObject go, float size = 13)
     {
-        if (go.prefabAssetPath != null) DrawShape(Shape.Cube, PrefabBlue, size);
+        if (go.prefabAssetPath != null) DrawShape(Shape.Cube, PrefabColor, size);
         else
         {
             var (shape, color) = Describe(MainComponent(go));
@@ -123,7 +125,7 @@ public static class Widgets
         DrawShape(shape, color, size);
     }
 
-    public static void PrefabIcon(float size = 13) => DrawShape(Shape.Cube, PrefabBlue, size);
+    public static void PrefabIcon(float size = 13) => DrawShape(Shape.Cube, PrefabColor, size);
 
     private static void DrawShape(Shape shape, Vector4 color4, float size)
     {

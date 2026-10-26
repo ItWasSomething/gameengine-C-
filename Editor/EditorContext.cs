@@ -23,6 +23,9 @@ public sealed class EditorContext
     public string? ScenePath { get; private set; }
     public bool IsDirty { get; private set; }
 
+    // "Don't save": forget unsaved changes (so closing doesn't write a recovery file).
+    public void MarkClean() => IsDirty = false;
+
     public GameObject? Selected { get; private set; }
     public PlayState State { get; private set; } = PlayState.Editing;
     public bool IsPlaying => State != PlayState.Editing;
@@ -155,6 +158,9 @@ public sealed class EditorContext
                 go = new GameObject("Sky Environment");
                 go.AddComponent<SkyEnvironment>();
                 break;
+            case "Rubber Duck":
+                go = BuildRubberDuck();
+                break;
             default:
                 go = new GameObject("GameObject");
                 break;
@@ -166,6 +172,38 @@ public sealed class EditorContext
         go.name = UniqueName(go.name, parent);
         Selected = go;
         return go;
+    }
+
+    // A duck made of primitives: a squashed sphere body, a head, a beak and
+    // two eyes, parented under one root that carries the RubberDuck brain.
+    // Children's colliders/picking work as usual; clicking any part selects
+    // the whole duck in the Hierarchy via its root.
+    private static GameObject BuildRubberDuck()
+    {
+        var duck = new GameObject("Rubber Duck");
+        duck.AddComponent<RubberDuck>();
+        var yellow = new Color(1f, 0.82f, 0.1f);
+
+        GameObject Part(string name, PrimitiveType shape, Vector3 position, Vector3 scale, Color color, float smoothness = 0.75f)
+        {
+            var part = GameObject.CreatePrimitive(shape);
+            part.name = name;
+            part.transform.SetParent(duck.transform, worldPositionStays: false);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+            var material = part.GetComponent<MeshRenderer>()!.material;
+            material.color = color;
+            material.smoothness = smoothness;   // rubber ducks are shiny
+            return part;
+        }
+
+        Part("Body", PrimitiveType.Sphere, new Vector3(0, 0.38f, -0.05f), new Vector3(1f, 0.75f, 1.3f), yellow);
+        Part("Tail", PrimitiveType.Sphere, new Vector3(0, 0.62f, -0.62f), new Vector3(0.35f, 0.3f, 0.35f), yellow);
+        Part("Head", PrimitiveType.Sphere, new Vector3(0, 0.95f, 0.38f), new Vector3(0.62f), yellow);
+        Part("Beak", PrimitiveType.Cube, new Vector3(0, 0.88f, 0.74f), new Vector3(0.3f, 0.1f, 0.28f), new Color(1f, 0.45f, 0.08f));
+        Part("Left Eye", PrimitiveType.Sphere, new Vector3(-0.17f, 1.05f, 0.64f), new Vector3(0.1f), new Color(0.03f, 0.03f, 0.03f), 0.9f);
+        Part("Right Eye", PrimitiveType.Sphere, new Vector3(0.17f, 1.05f, 0.64f), new Vector3(0.1f), new Color(0.03f, 0.03f, 0.03f), 0.9f);
+        return duck;
     }
 
     public void DeleteSelected()
