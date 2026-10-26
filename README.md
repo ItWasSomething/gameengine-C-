@@ -20,8 +20,8 @@ It started as a small 2D engine and grew into three runnable things:
 ## Getting started
 
 ```powershell
-git clone https://github.com/<your-username>/MyEngine.git
-cd MyEngine
+git clone https://github.com/ItWasSomething/gameengine-C-.git
+cd gameengine-C-
 dotnet build MyEngine.slnx
 ```
 
