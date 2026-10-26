@@ -1,0 +1,787 @@
+{
+  "format": 2,
+  "kind": "scene",
+  "name": "Untitled",
+  "roots": [
+    {
+      "name": "Main Camera",
+      "id": "802554dd-81cf-461a-9181-8ca34ad9501d",
+      "active": true,
+      "tag": "MainCamera",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "aa562234-1e04-4061-a224-599d26279c33",
+          "fields": {
+            "localPosition": [
+              0,
+              3.2,
+              -9
+            ],
+            "localEulerAngles": [
+              14,
+              0,
+              0
+            ],
+            "localScale": [
+              1,
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "type": "Camera",
+          "id": "21216916-da81-493a-be5d-87ef74f64d20",
+          "enabled": true,
+          "fields": {
+            "fieldOfView": 60,
+            "nearClipPlane": 0.3,
+            "farClipPlane": 1000,
+            "depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Directional Light",
+      "id": "c3995ad5-6fc3-41e9-aa68-b1a1faf090a9",
+      "active": true,
+      "tag": "Untagged",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "31e22a47-8e7f-427a-9a1c-5fa20a529764",
+          "fields": {
+            "localPosition": [
+              0,
+              6,
+              0
+            ],
+            "localEulerAngles": [
+              38,
+              -40,
+              0
+            ],
+            "localScale": [
+              1,
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "type": "Light",
+          "id": "1a9fac4f-692b-4d52-a605-489d7c6b09fa",
+          "enabled": true,
+          "fields": {
+            "type": "Directional",
+            "color": [
+              1,
+              0.88,
+              0.74,
+              1
+            ],
+            "intensity": 1.1,
+            "range": 10
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sky Environment",
+      "id": "e19da383-12e9-4d51-b909-af88e72ab647",
+      "active": true,
+      "tag": "Untagged",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "be29bf07-3bd2-47ab-aa18-d7a82cd1534a",
+          "fields": {
+            "localPosition": [
+              0,
+              0,
+              0
+            ],
+            "localEulerAngles": [
+              0,
+              0,
+              0
+            ],
+            "localScale": [
+              1,
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "type": "SkyEnvironment",
+          "id": "f631179e-5b2b-4a28-969e-9e07a7161410",
+          "fields": {
+            "skyTop": [
+              0.22,
+              0.36,
+              0.62,
+              1
+            ],
+            "skyHorizon": [
+              0.86,
+              0.72,
+              0.6,
+              1
+            ],
+            "ground": [
+              0.2,
+              0.17,
+              0.16,
+              1
+            ],
+            "ambientIntensity": 0.55,
+            "exposure": 1,
+            "fogDensity": 0.012
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ground",
+      "id": "cdaf348a-78d9-4e32-804d-10637cde6248",
+      "active": true,
+      "tag": "Untagged",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "3bd949f9-af01-48d3-bc0a-02b216525b78",
+          "fields": {
+            "localPosition": [
+              0,
+              0,
+              0
+            ],
+            "localEulerAngles": [
+              0,
+              0,
+              0
+            ],
+            "localScale": [
+              4,
+              1,
+              4
+            ]
+          }
+        },
+        {
+          "type": "MeshFilter",
+          "id": "57e516d4-e50d-4345-be07-2545e9529c04",
+          "fields": {
+            "mesh": "Plane"
+          }
+        },
+        {
+          "type": "MeshRenderer",
+          "id": "fb46c1a1-0bcf-4c65-a441-7c61cd3a307b",
+          "enabled": true,
+          "fields": {
+            "material": {
+              "color": [
+                0.42,
+                0.44,
+                0.48,
+                1
+              ],
+              "metallic": 0,
+              "smoothness": 0.08,
+              "emissionColor": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "checker": true,
+              "checkerScale": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Turntable",
+      "id": "0aab8275-b896-45a0-91dc-c0e6a6486422",
+      "active": true,
+      "tag": "Untagged",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "a16dceaa-1c63-4884-ae54-d5e5cbc7585d",
+          "fields": {
+            "localPosition": [
+              0,
+              0,
+              0
+            ],
+            "localEulerAngles": [
+              0,
+              0,
+              0
+            ],
+            "localScale": [
+              1,
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "type": "Rotator",
+          "id": "ac70f534-cf97-43be-98c9-4a316e73f3d6",
+          "enabled": true,
+          "fields": {
+            "degreesPerSecond": [
+              0,
+              30,
+              0
+            ],
+            "bobHeight": 0,
+            "bobSpeed": 1
+          }
+        }
+      ],
+      "children": [
+        {
+          "name": "Gold Sphere",
+          "id": "d5cd50cc-4d53-4858-8d00-8789d4aaebf9",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "dd24ac58-308e-4f4c-99a3-bcd2f0f8585c",
+              "fields": {
+                "localPosition": [
+                  -2.2,
+                  0.9,
+                  0
+                ],
+                "localEulerAngles": [
+                  0,
+                  0,
+                  0
+                ],
+                "localScale": [
+                  1.8,
+                  1.8,
+                  1.8
+                ]
+              }
+            },
+            {
+              "type": "MeshFilter",
+              "id": "02ffb7b1-8d82-46e1-a4c4-258ebf4f5c23",
+              "fields": {
+                "mesh": "Sphere"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "id": "fb010d19-864a-4a66-a8d2-f884c154030d",
+              "enabled": true,
+              "fields": {
+                "material": {
+                  "color": [
+                    1,
+                    0.78,
+                    0.36,
+                    1
+                  ],
+                  "metallic": 1,
+                  "smoothness": 0.78,
+                  "emissionColor": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "checker": false,
+                  "checkerScale": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crate",
+          "id": "4f250cc9-7a2b-4433-8e0d-65e434e6c305",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "94f43a72-f63b-4e67-9d50-41573af6b6bf",
+              "fields": {
+                "localPosition": [
+                  2.2,
+                  0.7,
+                  0
+                ],
+                "localEulerAngles": [
+                  0,
+                  25,
+                  0
+                ],
+                "localScale": [
+                  1.4,
+                  1.4,
+                  1.4
+                ]
+              }
+            },
+            {
+              "type": "MeshFilter",
+              "id": "4abefd42-3e3d-45be-9d80-d025d6444a48",
+              "fields": {
+                "mesh": "Cube"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "id": "be901d4d-dc59-4e40-bb72-63c4758a7069",
+              "enabled": true,
+              "fields": {
+                "material": {
+                  "color": [
+                    1,
+                    0.54,
+                    0.24,
+                    1
+                  ],
+                  "metallic": 0,
+                  "smoothness": 0.45,
+                  "emissionColor": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "checker": false,
+                  "checkerScale": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Glow Capsule",
+      "id": "5da61d58-d8f0-4549-a8f3-fa84720bb124",
+      "active": true,
+      "tag": "Untagged",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "4e3d38bb-7c33-4030-b980-e86d80742dc1",
+          "fields": {
+            "localPosition": [
+              0,
+              1.4,
+              3.5
+            ],
+            "localEulerAngles": [
+              0,
+              0,
+              0
+            ],
+            "localScale": [
+              0.8,
+              0.9,
+              0.8
+            ]
+          }
+        },
+        {
+          "type": "MeshFilter",
+          "id": "bd35f88c-f8fc-4e2d-8cd8-ea0da9ebca5c",
+          "fields": {
+            "mesh": "Capsule"
+          }
+        },
+        {
+          "type": "MeshRenderer",
+          "id": "39d7adce-2263-4f1c-bc6e-715241489434",
+          "enabled": true,
+          "fields": {
+            "material": {
+              "color": [
+                0.1,
+                0.1,
+                0.12,
+                1
+              ],
+              "metallic": 0,
+              "smoothness": 0.5,
+              "emissionColor": [
+                0.625,
+                2.125,
+                2.5,
+                2.5
+              ],
+              "checker": false,
+              "checkerScale": 1
+            }
+          }
+        },
+        {
+          "type": "Rotator",
+          "id": "add631c4-437d-4bcd-8481-735a2ac878a9",
+          "enabled": true,
+          "fields": {
+            "degreesPerSecond": [
+              0,
+              0,
+              0
+            ],
+            "bobHeight": 0.25,
+            "bobSpeed": 0.5
+          }
+        }
+      ],
+      "children": [
+        {
+          "name": "Capsule Light",
+          "id": "13c82722-d109-4763-9744-4b4bc0e70f71",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "f15145f0-9fa9-4db2-a3cc-428500310cab",
+              "fields": {
+                "localPosition": [
+                  0,
+                  0,
+                  -1
+                ],
+                "localEulerAngles": [
+                  0,
+                  0,
+                  0
+                ],
+                "localScale": [
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "type": "Light",
+              "id": "1d6101a8-cae8-43ea-8654-dce249925ba9",
+              "enabled": true,
+              "fields": {
+                "type": "Point",
+                "color": [
+                  0.4,
+                  0.85,
+                  1,
+                  1
+                ],
+                "intensity": 2,
+                "range": 7
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pillars",
+      "id": "913a8734-cbe7-4df8-b69e-7b5c9be3cfb1",
+      "active": true,
+      "tag": "Untagged",
+      "layer": 0,
+      "components": [
+        {
+          "type": "Transform",
+          "id": "9c49aa44-1c02-47ee-9218-906c96574b9e",
+          "fields": {
+            "localPosition": [
+              0,
+              0,
+              0
+            ],
+            "localEulerAngles": [
+              0,
+              0,
+              0
+            ],
+            "localScale": [
+              1,
+              1,
+              1
+            ]
+          }
+        }
+      ],
+      "children": [
+        {
+          "name": "Pillar (1)",
+          "id": "767a344c-a1f5-4bc4-9449-668842b0fd94",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "2277fa84-400d-494b-a4a1-7c2f54c0b4da",
+              "fields": {
+                "localPosition": [
+                  6.447427,
+                  1.5,
+                  2.7259283
+                ],
+                "localEulerAngles": [
+                  0,
+                  0,
+                  0
+                ],
+                "localScale": [
+                  0.9,
+                  1.5,
+                  0.9
+                ]
+              }
+            },
+            {
+              "type": "MeshFilter",
+              "id": "f4cddc49-0d36-4bde-97e0-ee63a93ce22a",
+              "fields": {
+                "mesh": "Cylinder"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "id": "ccac7b0b-0353-4270-8219-e1549549492f",
+              "enabled": true,
+              "fields": {
+                "material": {
+                  "color": [
+                    0.78,
+                    0.76,
+                    0.72,
+                    1
+                  ],
+                  "metallic": 0,
+                  "smoothness": 0.25,
+                  "emissionColor": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "checker": false,
+                  "checkerScale": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pillar (2)",
+          "id": "de090404-802e-4737-9ce3-42b215c76d6c",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "9bdba57e-8152-46d4-8818-c36d05bdef48",
+              "fields": {
+                "localPosition": [
+                  -2.7259285,
+                  1.5,
+                  6.447427
+                ],
+                "localEulerAngles": [
+                  0,
+                  0,
+                  0
+                ],
+                "localScale": [
+                  0.9,
+                  1.5,
+                  0.9
+                ]
+              }
+            },
+            {
+              "type": "MeshFilter",
+              "id": "be13a073-1e26-4d3e-a81d-bb4f685587e8",
+              "fields": {
+                "mesh": "Cylinder"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "id": "37bc4ef8-b148-4504-ae8c-f773a6631967",
+              "enabled": true,
+              "fields": {
+                "material": {
+                  "color": [
+                    0.78,
+                    0.76,
+                    0.72,
+                    1
+                  ],
+                  "metallic": 0,
+                  "smoothness": 0.25,
+                  "emissionColor": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "checker": false,
+                  "checkerScale": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pillar (3)",
+          "id": "5a847dcc-07bb-4a46-92dd-2209ace8b87b",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "9e1cfe80-3a5a-425a-9add-4b464b0442f0",
+              "fields": {
+                "localPosition": [
+                  -6.4474263,
+                  1.5,
+                  -2.7259295
+                ],
+                "localEulerAngles": [
+                  0,
+                  0,
+                  0
+                ],
+                "localScale": [
+                  0.9,
+                  1.5,
+                  0.9
+                ]
+              }
+            },
+            {
+              "type": "MeshFilter",
+              "id": "eb268519-3c61-4252-997d-5e14b2f231fc",
+              "fields": {
+                "mesh": "Cylinder"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "id": "530466d7-9db1-4b17-ba38-c8b0fe77c0c3",
+              "enabled": true,
+              "fields": {
+                "material": {
+                  "color": [
+                    0.78,
+                    0.76,
+                    0.72,
+                    1
+                  ],
+                  "metallic": 0,
+                  "smoothness": 0.25,
+                  "emissionColor": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "checker": false,
+                  "checkerScale": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pillar (4)",
+          "id": "525b78ee-6acd-4a6c-abcf-7c7029008a96",
+          "active": true,
+          "tag": "Untagged",
+          "layer": 0,
+          "components": [
+            {
+              "type": "Transform",
+              "id": "9f666bb5-7115-4592-b4a4-558b1bc6fed8",
+              "fields": {
+                "localPosition": [
+                  2.7259293,
+                  1.5,
+                  -6.447427
+                ],
+                "localEulerAngles": [
+                  0,
+                  0,
+                  0
+                ],
+                "localScale": [
+                  0.9,
+                  1.5,
+                  0.9
+                ]
+              }
+            },
+            {
+              "type": "MeshFilter",
+              "id": "11b8998a-5543-43ab-83fd-af534e55eb16",
+              "fields": {
+                "mesh": "Cylinder"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "id": "246a31ad-7bea-4dce-985f-15aab334a49f",
+              "enabled": true,
+              "fields": {
+                "material": {
+                  "color": [
+                    0.78,
+                    0.76,
+                    0.72,
+                    1
+                  ],
+                  "metallic": 0,
+                  "smoothness": 0.25,
+                  "emissionColor": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ],
+                  "checker": false,
+                  "checkerScale": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Normalize line endings; keep Windows-friendly files as CRLF
+* text=auto
+*.cs      text diff=csharp
+*.csproj  text eol=crlf
+*.slnx    text eol=crlf
+*.sln     text eol=crlf
+*.vert    text
+*.frag    text
+*.scene   text
+*.prefab  text
+*.md      text
+
+# Binary assets
+*.png  binary
+*.jpg  binary
+*.pdf  binary
+*.dll  binary
