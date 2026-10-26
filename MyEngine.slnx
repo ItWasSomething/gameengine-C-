@@ -2,4 +2,5 @@
   <Project Path="Editor/Editor.csproj" />
   <Project Path="Engine/Engine.csproj" />
   <Project Path="Game/Game.csproj" />
+  <Project Path="Website/Server/Server.csproj" />
 </Solution>

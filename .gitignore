@@ -37,3 +37,13 @@ screenshots/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# --- Website ---
+# SQLite database + uploaded files, and the built React site (npm run build)
+Website/Server/App_Data/
+Website/Server/wwwroot/
+node_modules/
+Website/Client/dist/
+
+# --- Game builds (File > Build Game) ---
+**/Builds/
